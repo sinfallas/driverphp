@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Made by Sinfallas <sinfallas@yahoo.com>
+# Licence: GPL-2
+LC_ALL=C
+IFS=" "
+trap "rm -f /run/$(basename $0).pid; exit" 0 1 2 3 15
+if [[ "$EUID" != "0" ]]; then
+	echo -e "\e[00;31mERROR: Debes ser root.\e[00m"
+	exit 1
+fi
+echo "$BASHPID" > /run/$(basename $0).pid
+quien=$(who | cut -d' ' -f1 | sort | uniq)
+
+function eliminar () {
+	apt -y purge dbconfig-mysql mysql-client-5.7 mysql-client-core-5.7 mysql-common mysql-server-5.7 mysql-server-core-5.7 php-mysql php7.0-mysql php-apcu php-common php-curl php-gd php-gettext php-mbstring php-memcached php-mysql php-pear php-phpseclib php-tcpdf php-zip php7.0 php7.0-cli php7.0-common php7.0-curl php7.0-dev php7.0-fpm php7.0-gd php7.0-json php7.0-mbstring php7.0-mcrypt php7.0-mysql php7.0-opcache php7.0-readline php7.0-xml php7.0-zip pkg-php-tools apache2-bin apache2-data apache2-utils mysql-server php7.0 mcrypt unixodbc-dev phpmyadmin php-sybase libapache2-mod-php7.0 apache2 git postgresql-9.4 composer php7.1-zip php7.0-zip
+	apt clean
+	echo "Finalizado..."
+}
+
+function instalar () {
+	add-apt-repository -y ppa:ondrej/php
+	wget -q -O /etc/apt/sources.list.d/mssql-release.list - https://packages.microsoft.com/config/ubuntu/16.04/prod.list
+	wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | apt-key add -
+	echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+	wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | apt-key add -
+	apt -q update
+	apt -y install dbconfig-mysql mysql-client-5.7 mysql-client-core-5.7 mysql-common mysql-server-5.7 mysql-server-core-5.7 php-mysql php7.0-mysql php-apcu php-common php-curl php-gd php-gettext php-mbstring php-memcached php-mysql php-pear php-phpseclib php-tcpdf php-zip php7.0 php7.0-cli php7.0-common php7.0-curl php7.0-dev php7.0-fpm php7.0-gd php7.0-json php7.0-mbstring php7.0-mcrypt php7.0-mysql php7.0-opcache php7.0-readline php7.0-xml php7.0-zip pkg-php-tools apache2-bin apache2-data apache2-utils mysql-server php7.0 mcrypt postgresql-9.4 sysfsutils
+	ACCEPT_EULA=Y apt -y install msodbcsql mssql-tools
+	apt -y install unixodbc-dev phpmyadmin php-sybase
+	echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> /home/$quien/.bash_profile
+	echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> /home/$quien/.bashrc
+	echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> /root/.bash_profile
+	echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> /root/.bashrc
+	source /root/.bashrc
+	pear config-set php_ini `php --ini | grep "Loaded Configuration" | sed -e "s|.*:\s*||"` system
+	pecl install sqlsrv
+	pecl install pdo_sqlsrv
+	apt -y install libapache2-mod-php7.0 apache2 composer
+	a2dismod mpm_event
+	a2enmod mpm_prefork
+	a2enmod php7.0
+	# max_allowed_packet=32M (mysql)
+	composer create-project --prefer-dist laravel/laravel blog
+	echo "extension=sqlsrv.so" >> /etc/php/7.0/apache2/php.ini
+	echo "extension=pdo_sqlsrv.so" >> /etc/php/7.0/apache2/php.ini
+	echo "kernel/mm/transparent_hugepage/enabled = always" >> /etc/sysfs.conf 
+	echo "kernel/mm/transparent_hugepage/khugepaged/pages_to_scan = 20000" >> /etc/sysfs.conf 
+	echo "large-pages" >> /etc/mysql/mysql.conf.d/mysqld.cnf
+	echo 'sql_mode = "NO_ENGINE_SUBSTITUTION"' >> /etc/mysql/mysql.conf.d/mysqld.cnf
+	echo "AddDefaultCharset utf-8" >> /etc/apache2/apache2.conf
+	systemctl restart mysql
+	systemctl restart apache2
+	echo "Finalizado..."
+}
+
+case "$1" in
+	instalar)
+		instalar
+		;;	
+
+	eliminar)
+		eliminar
+		;;
+
+	*)
+		echo "uso: $(basename $0) {instalar|eliminar}"
+		;;
+
+esac
+rm -f /run/$(basename $0).pid
+exit 0

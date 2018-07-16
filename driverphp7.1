@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Made by Sinfallas <sinfallas@yahoo.com>
+# Licence: GPL-2
+LC_ALL=C
+IFS=" "
+trap "rm -f /run/$(basename $0).pid; exit" 0 1 2 3 15
+if [[ "$EUID" != "0" ]]; then
+	echo -e "\e[00;31mERROR: Debes ser root.\e[00m"
+	exit 1
+fi
+echo "$BASHPID" > /run/$(basename $0).pid
+quien=$(who | cut -d' ' -f1 | sort | uniq)
+
+add-apt-repository -y ppa:ondrej/php
+wget -q -O /etc/apt/sources.list.d/mssql-release.list - https://packages.microsoft.com/config/ubuntu/16.04/prod.list
+wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | apt-key add -
+echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | apt-key add -
+apt -q update
+
+apt-get install php7.1 php7.1-cli php7.1-common php7.1-json php7.1-opcache php7.1-mysql php7.1-mbstring php7.1-mcrypt php7.1-zip php7.1-fpm php-pear php7.1-xml php7.1-dev unixodbc unixodbc-dev gcc g++ make autoconf libc-dev pkg-config php7.1-gd composer npm
+
+a2dismod php7.2
+a2enmod php7.1
+a2dismod mpm_event
+a2enmod mpm_prefork
+
+pecl install sqlsrv
+pecl install pdo_sqlsrv
+pecl install sqlsrv-5.2.1preview
+pecl install pdo_sqlsrv-5.2.1preview
+
+ACCEPT_EULA=Y apt-get install mssql-tools
+
+echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> /home/$quien/.bash_profile
+echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> /home/$quien/.bashrc
+echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> /root/.bash_profile
+echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> /root/.bashrc
+echo "extension=sqlsrv.so" >> /etc/php/7.1/apache2/conf.d/20-sqlsrv.ini
+echo "extension=pdo_sqlsrv.so" >> /etc/php/7.1/apache2/conf.d/30-pdo_sqlsrv.ini
+echo "extension=pdo_sqlsrv.so" >> /etc/php/7.1/cli/conf.d/30-pdo_sqlsrv.ini
+echo "extension=sqlsrv.so" >> /etc/php/7.1/cli/conf.d/20-sqlsrv.ini
+
+systemctl restart apache2
+
+rm -f /run/$(basename $0).pid
+exit 0
