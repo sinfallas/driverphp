@@ -1,4 +1,16 @@
-commit 10da4beaa2e735ec5003034118050b7fb7b81730 (HEAD -> master, origin/master, origin/HEAD)
+commit 73ecbee9028fa218af4ce8b081c91ad3d0615264 (HEAD -> master, origin/master, origin/HEAD)
+Author: jose perez <sinfallas@gmail.com>
+Date:   Mon Apr 27 16:54:00 2020 -0400
+
+    permisos
+
+commit 35f9831da1d4b585a6698abcd19b9de65cada595
+Author: jose perez <sinfallas@gmail.com>
+Date:   Sun Sep 30 13:26:32 2018 -0400
+
+    * changelog
+
+commit 10da4beaa2e735ec5003034118050b7fb7b81730
 Author: jesus palencia <jesus.palencia@grupopro.com.ve>
 Date:   Mon Jul 16 09:07:10 2018 -0400
 
